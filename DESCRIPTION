@@ -15,3 +15,4 @@ LinkingTo: Rcpp, RcppEigen, RViennaCL, gpuR
 Suggests: testthat
 URL: http://github.com/gpuRcore/gpuRclFFT
 BugReports: http://github.com/gpuRcore/gpuRclFFT/issues/new
+SystemRequirements: C++11

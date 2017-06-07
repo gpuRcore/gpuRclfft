@@ -1,1 +1,3 @@
-PKG_LIBS = -lclfft -lOpenCL
+CXX_STD = CXX11
+PKG_LIBS = -L/usr/local/lib64/ -lclFFT -Wl,-rpath,/usr/local/lib64/ -lOpenCL
+PKG_CPPFLAGS = -std=c++11

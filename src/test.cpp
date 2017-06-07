@@ -5,6 +5,7 @@
 /* No need to explicitely include the OpenCL headers */
 #include <clFFT.h>
 
+// [[Rcpp::export]]
 void clfft_test(SEXP ptrA_)
 {
     cl_int err;
@@ -14,18 +15,17 @@ void clfft_test(SEXP ptrA_)
     cl_context ctx = 0;
     cl_command_queue queue = 0;
     cl_event event = NULL;
-    int ret = 0;
 	
     Rcpp::XPtr<dynEigenVec<float> > ptrA(ptrA_);
 	
 	// move data to device
-	ptrA->to_device(ctx);
+	ptrA->to_device(0);
 	
 	// get device pointer
-	viennacl::vector<float> vcl_A* = ptrA->getDevicePtr();
+	viennacl::vector_base<float> *vcl_A = ptrA->getDevicePtr();
 	
 	// number of elements
-	const size_t N = vcl_A->internal_size1() * vcl_A->internal_size2();
+	const size_t N = vcl_A->internal_size();
 
 	/* FFT library realted declarations */
 	clfftPlanHandle planHandle;
@@ -39,9 +39,9 @@ void clfft_test(SEXP ptrA_)
     props[1] = (cl_context_properties)platform;
     ctx = clCreateContext( props, 1, &device, NULL, NULL, &err );
 	
-	// Create a command queue and use the first device
+    // Create a command queue and use the first device
     // CommandQueue queue = CommandQueue(context, devices[0], 0, &err);
-    cl_command_queue queue = vcl_A->handle().opencl_handle().context().get_queue().handle().get();
+	queue = vcl_A->handle().opencl_handle().context().get_queue().handle().get();
 
     /* Setup clFFT. */
 	clfftSetupData fftSetup;
@@ -51,7 +51,7 @@ void clfft_test(SEXP ptrA_)
 
     /* Prepare OpenCL memory objects and place matrices inside them. */
     // Get memory buffers
-    const cl_mem *bufX = &vcl_A->handle().opencl_handle().get();
+    cl_mem *bufX = &vcl_A->handle().opencl_handle().get();
 
 	/* Create a default plan for a complex FFT. */
 	err = clfftCreateDefaultPlan(&planHandle, ctx, dim, clLengths);
@@ -65,13 +65,13 @@ void clfft_test(SEXP ptrA_)
 	err = clfftBakePlan(planHandle, 1, &queue, NULL, NULL);
 
 	/* Execute the plan. */
-	err = clfftEnqueueTransform(planHandle, CLFFT_FORWARD, 1, &queue, 0, NULL, NULL, *bufX, NULL, NULL);
+	err = clfftEnqueueTransform(planHandle, CLFFT_FORWARD, 1, &queue, 0, NULL, NULL, bufX, NULL, NULL);
 
 	/* Wait for calculations to be finished. */
 	err = clFinish(queue);
 
 	// Copy back to host
-	ptrA->to_host(vcl_A);
+	ptrA->to_host();
 					  
 
 	/* Release the plan. */
@@ -84,5 +84,5 @@ void clfft_test(SEXP ptrA_)
     clReleaseCommandQueue( queue );
     clReleaseContext( ctx );
 
-    return ret;
+    return;
 }
